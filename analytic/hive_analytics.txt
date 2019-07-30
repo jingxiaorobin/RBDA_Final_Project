@@ -1,0 +1,35 @@
+//put data onto HDFS
+hdfs dfs -mkdir rbda/final
+hdfs dfs -mkdir rbda/final/input
+hdfs dfs -put genresInput.txt rbda/final/genresInput
+hdfs dfs -put mobileRatingsInput.txt rbda/final/mobileRatingsInput
+hdfs dfs -put pcRatingsInput.txt rbda/final/pcRatingsInput
+
+//connect to hive
+beeline
+!connect jdbc:hive2://babar.es.its.nyu.edu:10000/
+use asa566;
+
+//create tables for genre, mobile reviews, and pc reviews
+create external table g(name string, genre string)
+row format delimited fields terminated by ','
+location '/user/asa566/rbda/final/genresInput';
+
+create external table m(name string, rating double)
+row format delimited fields terminated by ','
+location '/user/asa566/rbda/final/mobileRatingsInput';
+
+create external table p(name string, rating double)
+row format delimited fields terminated by ','
+location '/user/asa566/rbda/final/pcRatingsInput';
+
+//join tables
+create table a as select g.name, g.genre, m.rating as mobilerating, p.rating as pcrating
+from g join m on (g.name = m.name)
+join p on (g.name = p.name);
+
+//average out reviews per genre for mobile and pc games
+select t.genre, t.mobilerating, t.pcrating from
+(select genre, 
+avg(mobilerating) as mobilerating, 
+avg(pcrating) as pcrating from a group by genre) t;
