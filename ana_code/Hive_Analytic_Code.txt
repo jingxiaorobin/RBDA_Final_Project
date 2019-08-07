@@ -1,0 +1,31 @@
+// Create tables on hive
+
+// table for the genres
+create external table genres(name string, genre string)
+row format delimited fields terminated by ','
+location '/user/tw1204/project/inputs/genresInput';
+
+
+//table for the mobile games (android and ios combined)
+create external table mobilegame(name string, rating double)
+row format delimited fields terminated by ','
+location '/user/tw1204/project/inputs/mobileRatingsInput';
+
+
+//table for the PC games (Steam)
+create external table pcgame(genre string, rating string)
+row format delimited fields terminated by ','
+location '/user/tw1204/project/inputs/PCInput';
+
+//combine mobile games of the same genres
+create table mobilegenre as select g.name, g.genre, m.name, m.rating
+from genres g join mobilegame m
+on (g.name = m.name);
+
+// Average for genre for mobile games
+select mgr.genre, mgr.rating from
+(select mgr.genre, avg(mobilegenre.rating) as rating from a group by genre) mgr;
+
+//combine both mobile and pc game genre pcRatings
+create table result as select mgr.genre, p.genre, p.rating as pcRating, mgr.rating as mobileRating
+from mgr join pcgame p on (p.genre = mgr.genre);
