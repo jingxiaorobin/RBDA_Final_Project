@@ -4,7 +4,7 @@ import os
 import datetime
 import sys
 
-fileObject = open('ios_review.txt', 'w')
+fileObject = open('ios_review_final.txt', 'w')
 
 count = 0
 for row in sys.stdin:
@@ -14,6 +14,7 @@ for row in sys.stdin:
         
         for i in range(100): # each day top 100 app
             appname = row[i]["trackCensoredName"]
+            genrelist = row[i]['genres'][-1]
             try:
                 topicnumber = row[i]["review_analysis"]["number_topics"]
                 for j in range(topicnumber):
@@ -21,7 +22,7 @@ for row in sys.stdin:
                     for a,x in enumerate(topic.keys()):
                         name='v'+str(a)
                         locals()['v'+str(a)]=topic[x]
-                    fileObject.write("%s,%s,%s,%s,%s,%s,%s,%s"%(appname,v0,v1,v2,v3,v4,v5,v6))   
+                    fileObject.write("%s,%s,%s,%s,%s,%s,%s,%s,%s"%(genrelist,appname,v0,v1,v2,v3,v4,v5,v6))   
                     fileObject.write("\n")
             except KeyError:
                 pass
