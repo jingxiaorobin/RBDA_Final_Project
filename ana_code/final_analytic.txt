@@ -1,0 +1,62 @@
+/*
+(using c/java styled comments)
+Directory structure on HDFS for inputs:
+final/inputs
+	-PCInput: average ratings by genre
+	-androidInput: average ratings by genre
+	-iphoneInput
+		-genresInput: map from game to genres
+		-ratingsInput: average ratings by game
+*/
+
+//Combine iphone ratings data with iphone genres data to get ratings by genre
+create external table iphonegenres(name string, genre string) 
+row format delimited fields terminated by ',' 
+location '/user/asa566/final/inputs/iphoneInput/genresInput';
+
+create external table iphoneratings(name string, rating double) 
+row format delimited fields terminated by ',' 
+location '/user/asa566/final/inputs/iphoneInput/ratingsInput';
+
+create table iphoneratingswithgenre as 
+select iphonegenres.name, iphonegenres.genre, iphoneratings.rating 
+from iphonegenres join iphoneratings on (iphonegenres.name = iphoneratings.name);
+
+create table iphoneratingsbygenre as 
+select mgr.genre, mgr.iphonerating from 
+(select genre, avg(rating) as iphonerating 
+from iphoneratingswithgenre group by genre) mgr;
+
+//get ratings by genre for PC
+create external table pcratingsbygenre(genre string, rating string) 
+row format delimited fields terminated by ',' 
+location '/user/asa566/final/inputs/PCInput';
+
+//get ratings by genre for android
+create external table androidratingsbygenre(genre string, androidrating string) 
+row format delimited fields terminated by ',' 
+location '/user/asa566/final/inputs/androidInput';
+
+//get ratings by genre for mobile, by first joining iphone and android tables
+create table mobileratingsjoined as 
+select androidratingsbygenre.genre, androidratingsbygenre.androidrating, 
+iphoneratingsbygenre.iphonerating 
+from iphoneratingsbygenre join androidratingsbygenre on 
+(iphoneratingsbygenre.genre = androidratingsbygenre.genre);
+
+create table mobileratingsbygenre as 
+select m.genre, m.rating from 
+(select genre, (androidrating+iphonerating)/2 
+as rating from mobileratingsjoined) m;
+
+//join data into one table- normalize data to be out of 5
+create table allratings as 
+select pcratingsbygenre.genre, pcratingsbygenre.rating*5 as pcrating, 
+mobileratingsbygenre.rating as mobilerating 
+from mobileratingsbygenre join pcratingsbygenre on 
+(pcratingsbygenre.genre = mobileratingsbygenre.genre);
+
+//compare data, look at difference
+create table result as select genre, pcrating, mobilerating, difference from 
+(select genre, pcrating as pcrating, mobilerating, 
+pcrating - mobilerating as difference from allratings) a;
